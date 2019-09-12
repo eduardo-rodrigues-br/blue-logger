@@ -100,6 +100,7 @@ class BlueLogger implements ILogger {
             showLogLevel: false,
             showMethodName: false,
             stringifyArguments: false,
+            remoteUrl: "localhost:8080"
         };
     }
 }

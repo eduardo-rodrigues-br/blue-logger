@@ -8,4 +8,5 @@ export interface ILoggerOptions {
     showLogLevel: boolean;
     showMethodName: boolean;
     stringifyArguments: boolean;
+    remoteUrl: string;
 }
