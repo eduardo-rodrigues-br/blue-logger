@@ -1,6 +1,8 @@
 import {LogLevels} from "./enum/log-levels";
 import {ILogger} from "./interfaces/logger";
 import {ILoggerOptions} from "./interfaces/logger-options";
+import { StreamType } from "./enum/stream-type";
+import { IStream } from "./interfaces/stream";
 
 class BlueLogger implements ILogger {
 
@@ -72,7 +74,7 @@ class BlueLogger implements ILogger {
                         const logLevelPrefix = options.showLogLevel ? logLevel + ` ${options.separator} ` : "";
                         const formattedArguments = options.stringifyArguments ? args.map((a) => JSON.stringify(a)) : args;
                         const logMessage = `${logLevelPrefix} ${methodNamePrefix}`;
-                        this.printLogMessage(logLevel, logMessage, options.showConsoleColors, formattedArguments);
+                        this.shipToStreams(logLevel, logMessage, options.showConsoleColors, formattedArguments, options.streams);
                         return `${logMessage} ${formattedArguments.toString()}`;
                     };
                 } else {
@@ -83,12 +85,34 @@ class BlueLogger implements ILogger {
         return logger;
     }
 
-    private printLogMessage(logLevel: string, logMessage: string, showConsoleColors: boolean, formattedArguments: any) {
-        if (showConsoleColors && (logLevel === "warn" || logLevel === "error" || logLevel === "fatal")) {
-            console[logLevel === "fatal" ? "error" : logLevel](logMessage, ...formattedArguments);
-        } else {
-            console.log(logMessage, ...formattedArguments);
+    private shipToStreams(logLevel: string, logMessage: string, showConsoleColors: boolean, formattedArguments: any, streams: [IStream]) {
+        if(streams.length > 0){
+            for (let index = 0; index < streams.length; index++) {
+                const stream = streams[index];
+                switch(stream.streamType){
+                    case StreamType.HTTP:
+                        this.sendHttpMessage(stream.client, stream.remoteUrl, logLevel, logMessage, formattedArguments)
+                        break;
+                }  
+            }
         }
+        else{
+            if (showConsoleColors && (logLevel === "warn" || logLevel === "error" || logLevel === "fatal")) {
+                console[logLevel === "fatal" ? "error" : logLevel](logMessage, ...formattedArguments);
+            } else {
+                console.log(logMessage, ...formattedArguments);
+            }
+        }
+    }
+
+    private sendHttpMessage(client: any, remoteUrl: string, logLevel: string, logMessage: string, formattedArguments: any) {
+        const body = {
+            logLevel: logLevel,
+            logMessage: logMessage,
+            arguments: formattedArguments
+        };
+
+        client.post(remoteUrl, body);
     }
 
     private getDefaultOptions(): ILoggerOptions {
@@ -100,7 +124,11 @@ class BlueLogger implements ILogger {
             showLogLevel: false,
             showMethodName: false,
             stringifyArguments: false,
-            remoteUrl: "localhost:8080"
+            streams: [{
+                streamType: StreamType.HTTP,
+                client: null,
+                remoteUrl: "http://localhost:8081"
+            }]
         };
     }
 }

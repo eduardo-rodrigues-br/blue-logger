@@ -1,4 +1,5 @@
 import {LogLevels} from "../enum/log-levels";
+import { IStream } from "./stream";
 
 export interface ILoggerOptions {
     isEnabled: boolean;
@@ -8,5 +9,5 @@ export interface ILoggerOptions {
     showLogLevel: boolean;
     showMethodName: boolean;
     stringifyArguments: boolean;
-    remoteUrl: string;
+    streams: [IStream];
 }
