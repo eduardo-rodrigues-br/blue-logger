@@ -8,9 +8,13 @@ class BlueLogger implements ILogger {
 
     private errorMessage: string = "Provided options for blue-logger are not valid.";
     private logLevels: string[] = Object.keys(LogLevels).map((l) => l.toLowerCase());
+    private sessionId: string;
 
     public install(Vue: any, options: ILoggerOptions) {
         options = Object.assign(this.getDefaultOptions(), options);
+        
+        this.sessionId = options.sessionId;
+        //this.moment = Vue.$moment;
 
         if (this.isValidOptions(options, this.logLevels)) {
             Vue.$log = this.initLoggerInstance(options, this.logLevels);
@@ -73,8 +77,9 @@ class BlueLogger implements ILogger {
                         const methodNamePrefix = options.showMethodName ? methodName + ` ${options.separator} ` : "";
                         const logLevelPrefix = options.showLogLevel ? logLevel + ` ${options.separator} ` : "";
                         const formattedArguments = options.stringifyArguments ? args.map((a) => JSON.stringify(a)) : args;
-                        const logMessage = `${logLevelPrefix} ${methodNamePrefix}`;
-                        this.shipToStreams(logLevel, logMessage, options.showConsoleColors, formattedArguments, options.streams);
+                        const logMessage = formattedArguments.join(" | ");
+                        const component = `${logLevelPrefix} ${methodNamePrefix}`;
+                        this.shipToStreams(logLevel, logMessage, options.showConsoleColors, component, options.streams);
                         return `${logMessage} ${formattedArguments.toString()}`;
                     };
                 } else {
@@ -85,31 +90,33 @@ class BlueLogger implements ILogger {
         return logger;
     }
 
-    private shipToStreams(logLevel: string, logMessage: string, showConsoleColors: boolean, formattedArguments: any, streams: [IStream]) {
+    private shipToStreams(logLevel: string, logMessage: string, showConsoleColors: boolean, component: string, streams: [IStream]) {
         if(streams.length > 0){
             for (let index = 0; index < streams.length; index++) {
                 const stream = streams[index];
                 switch(stream.streamType){
                     case StreamType.HTTP:
-                        this.sendHttpMessage(stream.client, stream.remoteUrl, logLevel, logMessage, formattedArguments)
+                        this.sendHttpMessage(stream.client, stream.remoteUrl, logLevel, logMessage, component)
                         break;
                 }  
             }
         }
         else{
             if (showConsoleColors && (logLevel === "warn" || logLevel === "error" || logLevel === "fatal")) {
-                console[logLevel === "fatal" ? "error" : logLevel](logMessage, ...formattedArguments);
+                console[logLevel === "fatal" ? "error" : logLevel](logMessage, component);
             } else {
-                console.log(logMessage, ...formattedArguments);
+                console.log(logMessage, component);
             }
         }
     }
 
-    private sendHttpMessage(client: any, remoteUrl: string, logLevel: string, logMessage: string, formattedArguments: any) {
+    private sendHttpMessage(client: any, remoteUrl: string, logLevel: string, logMessage: string, component: any) {
         const body = {
+            sessionId: this.sessionId,
             logLevel: logLevel,
             logMessage: logMessage,
-            arguments: formattedArguments
+            component: component,
+            timestamp: new Date()
         };
 
         client.post(remoteUrl, body);
@@ -118,17 +125,14 @@ class BlueLogger implements ILogger {
     private getDefaultOptions(): ILoggerOptions {
         return {
             isEnabled: true,
+            sessionId: undefined,
             logLevel: LogLevels.DEBUG,
             separator: "|",
             showConsoleColors: true,
             showLogLevel: false,
             showMethodName: false,
             stringifyArguments: false,
-            streams: [{
-                streamType: StreamType.HTTP,
-                client: null,
-                remoteUrl: "http://localhost:8081"
-            }]
+            streams: undefined
         };
     }
 }

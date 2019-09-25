@@ -10,4 +10,5 @@ export interface ILoggerOptions {
     showMethodName: boolean;
     stringifyArguments: boolean;
     streams: [IStream];
+    sessionId: string;
 }
