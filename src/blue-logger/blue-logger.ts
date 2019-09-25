@@ -78,8 +78,8 @@ class BlueLogger implements ILogger {
                         const logLevelPrefix = options.showLogLevel ? logLevel + ` ${options.separator} ` : "";
                         const formattedArguments = options.stringifyArguments ? args.map((a) => JSON.stringify(a)) : args;
                         const logMessage = formattedArguments.join(" | ");
-                        const component = `${logLevelPrefix} ${methodNamePrefix}`;
-                        this.shipToStreams(logLevel, logMessage, options.showConsoleColors, component, options.streams);
+                        const method = `${logLevelPrefix} ${methodNamePrefix}`;
+                        this.shipToStreams(logLevel, logMessage, options.showConsoleColors, method, options.streams);
                         return `${logMessage} ${formattedArguments.toString()}`;
                     };
                 } else {
@@ -90,33 +90,33 @@ class BlueLogger implements ILogger {
         return logger;
     }
 
-    private shipToStreams(logLevel: string, logMessage: string, showConsoleColors: boolean, component: string, streams: [IStream]) {
+    private shipToStreams(logLevel: string, logMessage: string, showConsoleColors: boolean, method: string, streams: [IStream]) {
         if(streams.length > 0){
             for (let index = 0; index < streams.length; index++) {
                 const stream = streams[index];
                 switch(stream.streamType){
                     case StreamType.HTTP:
-                        this.sendHttpMessage(stream.client, stream.remoteUrl, logLevel, logMessage, component)
+                        this.sendHttpMessage(stream.client, stream.remoteUrl, logLevel, logMessage, method)
                         break;
                 }  
             }
         }
         else{
             if (showConsoleColors && (logLevel === "warn" || logLevel === "error" || logLevel === "fatal")) {
-                console[logLevel === "fatal" ? "error" : logLevel](logMessage, component);
+                console[logLevel === "fatal" ? "error" : logLevel](logMessage, method);
             } else {
-                console.log(logMessage, component);
+                console.log(logMessage, method);
             }
         }
     }
 
-    private sendHttpMessage(client: any, remoteUrl: string, logLevel: string, logMessage: string, component: any) {
+    private sendHttpMessage(client: any, remoteUrl: string, logLevel: string, logMessage: string, method: any) {
         const body = {
-            sessionId: this.sessionId,
-            logLevel: logLevel,
-            logMessage: logMessage,
-            component: component,
-            timestamp: new Date()
+            SessionId: this.sessionId,
+            LogLevel: logLevel,
+            LogMessage: logMessage,
+            Method: method,
+            Timestamp: new Date()
         };
 
         client.post(remoteUrl, body);
